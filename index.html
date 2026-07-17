@@ -41,15 +41,15 @@
   #scene:active{cursor:grabbing}
 
   .frame{position:fixed;inset:13px;z-index:6;pointer-events:none;border-radius:8px;
-    border:1px solid var(--edge);
-    box-shadow:inset 0 0 0 7px rgba(244,235,213,.3)}
-  .frame i{position:absolute;width:18px;height:18px;border:1px solid var(--edge)}
+    border:1px solid rgba(244,235,213,.32);
+    box-shadow:inset 0 0 0 7px rgba(244,235,213,.12)}
+  .frame i{position:absolute;width:18px;height:18px;border:1px solid rgba(244,235,213,.55)}
   .frame i.tl{top:-1px;left:-1px;border-right:0;border-bottom:0}
   .frame i.tr{top:-1px;right:-1px;border-left:0;border-bottom:0}
   .frame i.bl{bottom:-1px;left:-1px;border-right:0;border-top:0}
   .frame i.br{bottom:-1px;right:-1px;border-left:0;border-top:0}
 
-  .compass{position:fixed;right:36px;bottom:34px;z-index:5;width:116px;height:116px;opacity:.38;pointer-events:none;color:var(--ink)}
+  .compass{position:fixed;right:36px;bottom:34px;z-index:5;width:116px;height:116px;opacity:.5;pointer-events:none;color:#f4ebd5}
   .compass svg{width:100%;height:100%;display:block}
 
   /* Goal cartouche */
@@ -352,7 +352,7 @@
     body.promo-open .goal{top:calc(64px + env(safe-area-inset-top))}
     .ring{width:60px;height:60px}.ring .num b{font-size:21px}.ring .num span{font-size:9px}
     .goal-meta h1{font-size:17px}.goal-meta .togo{font-size:14px;max-width:150px}
-    .compass{right:18px;bottom:auto;top:calc(16px + env(safe-area-inset-top));width:58px;height:58px}
+    .compass{display:none}
     .hint{display:none}
     .joy-toggle{--joy-b:calc(96px + env(safe-area-inset-bottom));left:calc(16px + env(safe-area-inset-left));transform:none}
     .joy-toggle.open{transform:scale(.9) rotate(45deg)}
@@ -384,7 +384,6 @@
     .wish-chips span{font-size:13px;padding:7px 13px}
     .item{padding:12px}
     .story-x{width:34px;height:34px;font-size:14px}
-    .compass{opacity:.14}
     .panel,.joy,.goal,.mcoach,.story{background:rgba(255,255,255,.95);border-color:rgba(22,24,29,.16)}
     .mcoach{display:flex;align-items:center;gap:9px;position:fixed;left:50%;transform:translateX(-50%);
       bottom:calc(98px + env(safe-area-inset-bottom));z-index:9;pointer-events:none;
@@ -647,12 +646,45 @@ document.getElementById('togoNum').textContent=Math.max(GOAL-visited,0);
 /* ---- three.js ---- */
 const canvas=document.getElementById('scene');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+const IS_SMALL=innerWidth<=720;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,IS_SMALL?1.5:2)); renderer.setSize(innerWidth,innerHeight);
 renderer.outputEncoding=THREE.sRGBEncoding;
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,0.1,100); camera.position.set(0,0,3.05);
 const R=1, globe=new THREE.Group(); scene.add(globe);
 const Y_AXIS=new THREE.Vector3(0,1,0), X_AXIS=new THREE.Vector3(1,0,0);
+
+/* ---- night-sky backdrop: dark gradient + drifting starfield behind the globe ---- */
+(function(){
+  const s=512,c=document.createElement('canvas');c.width=c.height=s;const g=c.getContext('2d');
+  const grad=g.createRadialGradient(s/2,s*0.42,0,s/2,s*0.42,s*0.72);
+  grad.addColorStop(0,'#161f38');grad.addColorStop(0.55,'#0b1122');grad.addColorStop(1,'#04060d');
+  g.fillStyle=grad;g.fillRect(0,0,s,s);
+  scene.background=new THREE.CanvasTexture(c);
+})();
+function makeStarTexture(){const s=32,c=document.createElement('canvas');c.width=c.height=s;const g=c.getContext('2d');
+  const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(0.4,'rgba(255,255,255,.75)');r.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=r;g.fillRect(0,0,s,s);return new THREE.CanvasTexture(c);}
+const STAR_TEX=makeStarTexture();
+function makeStarLayer(count,rMin,rMax,size,opacity,warm){
+  const pos=new Float32Array(count*3),col=new Float32Array(count*3);
+  for(let i=0;i<count;i++){
+    const u=Math.random(),v=Math.random(),theta=2*Math.PI*u,phi=Math.acos(2*v-1),rr=rMin+Math.random()*(rMax-rMin);
+    pos[i*3]=rr*Math.sin(phi)*Math.cos(theta); pos[i*3+1]=rr*Math.sin(phi)*Math.sin(theta); pos[i*3+2]=rr*Math.cos(phi);
+    const br=0.65+Math.random()*0.35, tint=warm&&Math.random()<0.3;
+    col[i*3]=br; col[i*3+1]=tint?br*0.92:br; col[i*3+2]=tint?br*0.72:br;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const mat=new THREE.PointsMaterial({map:STAR_TEX,size,sizeAttenuation:true,transparent:true,opacity,depthWrite:false,blending:THREE.AdditiveBlending,vertexColors:true});
+  return new THREE.Points(geo,mat);
+}
+const starGroup=new THREE.Group();
+starGroup.add(makeStarLayer(1500,16,34,0.055,0.55,false));
+starGroup.add(makeStarLayer(320,14,30,0.11,0.85,true));
+scene.add(starGroup);
 
 const earthMat=new THREE.MeshBasicMaterial({color:0xeef1f4});
 globe.add(new THREE.Mesh(new THREE.SphereGeometry(R,96,96),earthMat));
@@ -748,8 +780,8 @@ function makeSpill(lat,lng,hex,opacity){
   return m;}
 function makeHouse(accent){const g=new THREE.Group();const base=accent||0xc8902f,roofCol=shade(base).getHex();
   // simple matte glowing house: a cube body + a pyramid roof, nothing else
-  const wallMat=new THREE.MeshStandardMaterial({color:base,roughness:0.85,metalness:0,emissive:base,emissiveIntensity:0.28,transparent:true});
-  const roofMat=new THREE.MeshStandardMaterial({color:roofCol,roughness:0.8,metalness:0,emissive:roofCol,emissiveIntensity:0.28,transparent:true});
+  const wallMat=new THREE.MeshStandardMaterial({color:base,roughness:0.85,metalness:0,emissive:base,emissiveIntensity:0.22,transparent:true});
+  const roofMat=new THREE.MeshStandardMaterial({color:roofCol,roughness:0.8,metalness:0,emissive:roofCol,emissiveIntensity:0.22,transparent:true});
   const body=new THREE.Mesh(new THREE.BoxGeometry(0.018,0.018,0.018),wallMat);body.position.y=0.009;g.add(body);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(0.014,0.012,4),roofMat);roof.position.y=0.024;roof.rotation.y=Math.PI/4;g.add(roof);
   const glow=makeGlow(base,0.05,0.3);glow.position.y=0.014;g.add(glow);
@@ -1029,6 +1061,7 @@ const SWEEP_LNG=22, BOB_LAT=5, SWAY_SPEED=0.13;
 let prevT=performance.now(), spinRamp=0, swayPhase=0;
 function animate(now){requestAnimationFrame(animate);
   let dt=(now-prevT)/1000; prevT=now; if(dt>0.05)dt=0.05; const fr=dt*60; // frame-rate independent
+  starGroup.rotation.y+=dt*0.004; starGroup.rotation.x+=dt*0.0011; // slow drifting night sky
   if(fly){const k=ease(Math.min((now-fly.t0)/fly.dur,1));globe.quaternion.copy(fly.from).slerp(fly.to,k);
     if(fly.cz1!=null)camera.position.z=fly.cz0+(fly.cz1-fly.cz0)*k;if(k>=1)fly=null;}
   else if(joyActive){
@@ -1070,10 +1103,10 @@ function animate(now){requestAnimationFrame(animate);
       m.spill.material.opacity=Math.min(0.95,m.spillBase+0.3+0.14*Math.sin(t*3));
       m.halo.material.opacity=0.95;
     } else {const dim=anySel,hov=i===hoverI;
-      m.dot.material.color.setHex(m.accent);m.dot.material.emissive.setHex(m.accent);m.dot.material.emissiveIntensity=hov?0.55:0.32;
+      m.dot.material.color.setHex(m.accent);m.dot.material.emissive.setHex(m.accent);m.dot.material.emissiveIntensity=hov?0.55:0.24;
       m.pulse.material.opacity=0;m.pulse.scale.setScalar(zoomScale);m.dot.scale.setScalar(m.base*(hov?1.7:1));
       m.dot.material.opacity=dim?0.3:1;
-      m.glow.material.color.setHex(m.accent);m.glow.material.opacity=dim?0.12:(hov?0.55:0.3);m.glow.scale.setScalar(hov?0.058:0.042);
+      m.glow.material.color.setHex(m.accent);m.glow.material.opacity=dim?0.1:(hov?0.55:0.22);m.glow.scale.setScalar(hov?0.058:0.034);
       m.spill.material.opacity=dim?m.spillBase*0.3:m.spillBase;
       m.halo.material.opacity=dim?0.22:0.9;
     }
@@ -1085,8 +1118,8 @@ function animate(now){requestAnimationFrame(animate);
       m.house.userData.wallMat.color.setHex(hCol);m.house.userData.wallMat.emissive.setHex(hCol);m.house.userData.wallMat.emissiveIntensity=hInt;m.house.userData.wallMat.opacity=hop;
       m.house.userData.roofMat.color.setHex(rCol);m.house.userData.roofMat.emissive.setHex(rCol);m.house.userData.roofMat.emissiveIntensity=hInt*0.85;m.house.userData.roofMat.opacity=hop;
       m.house.userData.glow.material.color.setHex(sel?SELECTED_RED:m.house.userData.baseColor);
-      m.house.userData.glow.material.opacity=sel?0.78:(anySel?0.12:0.3);
-      m.house.userData.glow.scale.setScalar(sel?0.08:0.05);
+      m.house.userData.glow.material.opacity=sel?0.78:(anySel?0.1:0.22);
+      m.house.userData.glow.scale.setScalar(sel?0.08:0.042);
     }
     m.halo.scale.setScalar(zoomScale);
   });
