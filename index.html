@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&family=Jersey+10&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#16181d; --ink-soft:#5b616c; --ink-faint:rgba(22,24,29,.45); --line:rgba(22,24,29,.1);
@@ -26,6 +26,7 @@
     --soft:0 16px 40px -22px rgba(20,24,40,.22);
     --font-display:"Space Grotesk", system-ui, -apple-system, sans-serif;
     --font-body:"Hanken Grotesk", system-ui, -apple-system, sans-serif;
+    --font-pixel:"Jersey 10", "Space Grotesk", monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;width:100%;overflow:hidden}
@@ -310,7 +311,7 @@
   .splash-rose svg{width:100%;height:100%}
   @keyframes spinrose{to{transform:rotate(360deg)}}
   .s-kick{font-family:var(--font-display);font-size:11px;letter-spacing:.4em;color:var(--accent);text-transform:uppercase}
-  .s-title{font-family:var(--font-display);font-weight:600;font-size:clamp(28px,6vw,48px);line-height:1.04;letter-spacing:.5px;color:var(--ink);margin:8px 0 0}
+  .s-title{font-family:var(--font-pixel);font-weight:400;font-size:clamp(36px,7.5vw,60px);line-height:1.05;letter-spacing:.5px;color:var(--ink);margin:8px 0 0}
   .splash-bar{width:184px;height:3px;border-radius:3px;background:rgba(22,24,29,.1);overflow:hidden;margin:16px auto 0;position:relative}
   .splash-bar::after{content:"";position:absolute;top:0;left:0;height:100%;width:45%;border-radius:3px;background:var(--accent);animation:sslide 1.5s cubic-bezier(.4,0,.2,1) infinite}
   @keyframes sslide{0%{left:-50%;width:42%}50%{width:62%}100%{left:112%;width:38%}}
