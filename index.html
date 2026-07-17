@@ -803,7 +803,7 @@ function makeHouse(accent){const g=new THREE.Group();const base=accent||0xc8902f
   g.userData={wallMat,roofMat,glow,baseColor:base,roofColor:roofCol};
   return g;}
 const markers=[];
-PLACES.forEach((p,i)=>{const home=!!p.home,accent=home?0xc8902f:0x9a3324,haloCol=home?0xfff1cf:0xf3e8cd;
+PLACES.forEach((p,i)=>{const home=!!p.home,accent=home?0xc8902f:0xdc143c,haloCol=home?0xfff1cf:0xf3e8cd;
   const surf=v3(p.lat,p.lng,R*1.001),dir=surf.clone().normalize(),out=surf.clone().multiplyScalar(2),flat=v3(p.lat,p.lng,R*1.004);
   // flat contact halo + pulse on the crust
   const halo=new THREE.Mesh(haloGeo,new THREE.MeshBasicMaterial({color:haloCol,transparent:true,opacity:0.9,side:THREE.DoubleSide}));halo.position.copy(flat);halo.lookAt(out);globe.add(halo);
@@ -867,8 +867,7 @@ const listEl=document.getElementById('list');
 PLACES.forEach((p,i)=>{const el=document.createElement('div');el.className='item'+(p.home?' home':'');el.dataset.i=i;
   el.innerHTML=`<span class="idx">${String(i+1).padStart(2,'0')}</span>
     <canvas class="rmap" data-i="${i}" width="96" height="64"></canvas>
-    <span class="txt"><div class="nm">${p.name}</div><div class="rg">${p.region}</div></span>
-    <span class="dt">${p.home?'★ '+p.date:(p.date||'')}</span>`;
+    <span class="txt"><div class="nm">${p.name}</div><div class="rg">${p.region}</div></span>`;
   el.addEventListener('click',()=>manualGo(i)); listEl.appendChild(el);});
 if(mapImg) drawAllRowMaps();
 function setActive(i){document.querySelectorAll('.item').forEach(e=>{const on=+e.dataset.i===i;e.classList.toggle('active',on);if(on)e.scrollIntoView({block:'nearest',behavior:'smooth'});});}
@@ -910,6 +909,7 @@ function selectPhoto(idx){const n=nPhotos(storyEntry);storyIdx=Math.max(0,Math.m
   storyStage.classList.add('missing');
   tryLoad(sHero,storyKind,storyEntry.slug,storyIdx+1,()=>storyStage.classList.add('missing'),()=>storyStage.classList.remove('missing'));}
 function openStory(entry,kind,label){storyEntry=entry;storyKind=kind;
+  return; /* left-side story drawer hidden for now */
   sNo.textContent=label;sNo.classList.toggle('dream',kind==='dreams');
   sName.textContent=entry.name;sRg.textContent=entry.region;
   sDate.textContent=kind==='dreams'?'✦ On the wishlist':(entry.home?'★ My Home Base':(entry.date?('Visited '+entry.date):''));
