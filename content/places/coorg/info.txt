@@ -1,0 +1,9 @@
+name: Coorg
+region: Karnataka, India
+date: Jun 2026
+lat: 12.4244
+lng: 75.7382
+photos: 4
+
+story:
+Coffee country in the Western Ghats — misty estate mornings, the roar of Abbey Falls, and cardamom on the breeze.

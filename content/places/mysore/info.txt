@@ -1,0 +1,9 @@
+name: Mysore
+region: Karnataka, India
+date: Jun 2026
+lat: 12.2958
+lng: 76.6394
+photos: 4
+
+story:
+City of palaces — the Amba Vilas lit up gold at dusk, incense drifting through Devaraja Market, and the climb up Chamundi Hill.

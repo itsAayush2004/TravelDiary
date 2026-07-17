@@ -711,21 +711,11 @@ let mapImg=null;
 (function(){
   const img=new Image();
   img.onload=()=>{
-    // recolor the antique map by luminance: ocean -> blue, land -> olive/tan (keeps all the ink linework/shading)
-    const cv=document.createElement('canvas');cv.width=img.naturalWidth/2;cv.height=img.naturalHeight/2;
-    const cx2=cv.getContext('2d');cx2.drawImage(img,0,0,cv.width,cv.height);
+    // grayscale + lighten the antique map for the clean white/grey theme
+    const cv=document.createElement('canvas');cv.width=img.naturalWidth;cv.height=img.naturalHeight;
+    const cx2=cv.getContext('2d');cx2.drawImage(img,0,0);
     try{const id=cx2.getImageData(0,0,cv.width,cv.height),d=id.data;
-      const landLo=[28,58,26],landHi=[171,150,88],oceanLo=[10,45,92],oceanHi=[88,168,214];
-      const c01=x=>x<0?0:x>1?1:x;
-      for(let p=0;p<d.length;p+=4){
-        const g=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];
-        const kl=c01((g-20)/(195-20)), ko=c01((g-198)/(246-198));
-        const st=c01((g-188)/(208-188)), mix=st*st*(3-2*st);
-        for(let ch=0;ch<3;ch++){
-          const lc=landLo[ch]+(landHi[ch]-landLo[ch])*kl, oc=oceanLo[ch]+(oceanHi[ch]-oceanLo[ch])*ko;
-          d[p+ch]=lc*(1-mix)+oc*mix;
-        }
-      }
+      for(let p=0;p<d.length;p+=4){const g=0.299*d[p]+0.587*d[p+1]+0.114*d[p+2];const v=g*0.5+128;d[p]=d[p+1]=d[p+2]=v;}
       cx2.putImageData(id,0,0);}catch(_){}
     mapImg=cv;
     const t=new THREE.Texture(cv); t.encoding=THREE.sRGBEncoding;
