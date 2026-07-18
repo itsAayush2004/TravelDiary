@@ -1135,17 +1135,21 @@ function startPop(t){
   popState={dir:v3(lat,lng,1).normalize(),t0:t,asp:pd.asp};
   popSprite.visible=true;
 }
+const _popOutward=new THREE.Vector3();
 function updatePhotoPop(t){
   if(!popSplashEl||!popSplashEl.classList.contains('hide'))return; // wait until splash is dismissed
   if(!popStarted){popStarted=true;popNextT=t+1.2;}
   if(!popState){ if(t>=popNextT) startPop(t); return; }
   const u=Math.min(1,(t-popState.t0)/POP_DUR);
   const p=Math.sin(Math.PI*u); // smooth 0 -> 1 -> 0 bump: grows, holds near peak, shrinks
-  const radius=THREE.MathUtils.lerp(0.55,1.65,p); // below globe radius (hidden) -> above it (popped out)
+  const radius=THREE.MathUtils.lerp(0.18,1.65,p); // deep inside/behind the globe (hidden) -> well past its surface (popped out)
   const w=POP_PEAK_W*p, h=w/popState.asp;
   popSprite.position.copy(popState.dir).multiplyScalar(radius);
   popSprite.scale.set(Math.max(0.001,w),Math.max(0.001,h),1);
   popSpriteMat.opacity=p;
+  // keep the image's bottom (feet) pointed at the globe's centre regardless of where it pops out or how the globe has rotated
+  _popOutward.copy(popState.dir).applyQuaternion(globe.quaternion);
+  popSpriteMat.rotation=Math.atan2(-_popOutward.x,_popOutward.y);
   if(u>=1){ popSprite.visible=false; popState=null; popNextT=t+POP_GAP; }
 }
 
