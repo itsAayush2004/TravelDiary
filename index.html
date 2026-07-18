@@ -1099,6 +1099,56 @@ canvas.addEventListener('click',e=>{if(tapMoved>12)return;ndc.x=(e.clientX/inner
   const h=ray.intersectObjects(targets,false);if(!h.length)return;const u=h[0].object.userData;
   if(u.dream)dreamGo(DREAMS[u.di]);else manualGo(u.i);});
 
+/* ---- photo pop-ups: user photos burst out from random points all around the globe, one at a time, shuffled with no immediate repeats ---- */
+const POP_IMAGES=[
+  {src:'content/gallery/pop1.png',asp:0.5631},
+  {src:'content/gallery/pop2.png',asp:0.6009},
+  {src:'content/gallery/pop3.png',asp:0.6119},
+  {src:'content/gallery/pop4.png',asp:0.7504},
+  {src:'content/gallery/pop5.png',asp:0.6119},
+  {src:'content/gallery/pop6.png',asp:0.6009},
+  {src:'content/gallery/pop7.png',asp:0.5631}
+];
+const popLoader=new THREE.TextureLoader();
+const popTextures=POP_IMAGES.map(p=>{const tx=popLoader.load(p.src);tx.encoding=THREE.sRGBEncoding;return tx;});
+const popSpriteMat=new THREE.SpriteMaterial({transparent:true,depthWrite:false,opacity:0});
+const popSprite=new THREE.Sprite(popSpriteMat);
+popSprite.visible=false; globe.add(popSprite); // parented to the globe so it spins along with it
+const popSplashEl=document.getElementById('splash');
+
+function popShuffle(n){const a=[...Array(n).keys()];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+let popQueue=[],popLast=-1;
+function nextPopIdx(){
+  if(popQueue.length===0){
+    let q=popShuffle(POP_IMAGES.length);
+    if(POP_IMAGES.length>1&&q[0]===popLast){const s=1+Math.floor(Math.random()*(q.length-1));[q[0],q[s]]=[q[s],q[0]];}
+    popQueue=q;
+  }
+  const idx=popQueue.shift(); popLast=idx; return idx;
+}
+let popState=null,popNextT=0,popStarted=false;
+const POP_DUR=2.6, POP_GAP=0.55, POP_PEAK_W=0.65; // peak width ≈ 1/3 of the globe's width (2*R)
+function startPop(t){
+  const idx=nextPopIdx(), pd=POP_IMAGES[idx];
+  popSpriteMat.map=popTextures[idx]; popSpriteMat.needsUpdate=true;
+  const lat=Math.asin(2*Math.random()-1)*180/Math.PI, lng=Math.random()*360-180; // uniform random point, any direction
+  popState={dir:v3(lat,lng,1).normalize(),t0:t,asp:pd.asp};
+  popSprite.visible=true;
+}
+function updatePhotoPop(t){
+  if(!popSplashEl||!popSplashEl.classList.contains('hide'))return; // wait until splash is dismissed
+  if(!popStarted){popStarted=true;popNextT=t+1.2;}
+  if(!popState){ if(t>=popNextT) startPop(t); return; }
+  const u=Math.min(1,(t-popState.t0)/POP_DUR);
+  const p=Math.sin(Math.PI*u); // smooth 0 -> 1 -> 0 bump: grows, holds near peak, shrinks
+  const radius=THREE.MathUtils.lerp(0.55,1.65,p); // below globe radius (hidden) -> above it (popped out)
+  const w=POP_PEAK_W*p, h=w/popState.asp;
+  popSprite.position.copy(popState.dir).multiplyScalar(radius);
+  popSprite.scale.set(Math.max(0.001,w),Math.max(0.001,h),1);
+  popSpriteMat.opacity=p;
+  if(u>=1){ popSprite.visible=false; popState=null; popNextT=t+POP_GAP; }
+}
+
 /* ---- render ---- */
 const ease=k=>k<0.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
 // ambient motion gently sweeps across the region where the markers actually are — no full 360° spin
@@ -1184,6 +1234,7 @@ function animate(now){requestAnimationFrame(animate);
   const gsc=globe.scale.x+(gScaleTarget-globe.scale.x)*lerpK;globe.scale.setScalar(gsc);
   edgeRing.position.x=globe.position.x;edgeRing.position.y=globe.position.y;edgeRing.scale.setScalar(gsc);
   if(zoomSlider&&!sliderActive){zoomSlider.value=Math.round((4.6-camera.position.z)/(4.6-1.5)*100);}
+  updatePhotoPop(t);
   renderer.render(scene,camera);}
 requestAnimationFrame(animate);
 
