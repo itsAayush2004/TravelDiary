@@ -1099,7 +1099,7 @@ canvas.addEventListener('click',e=>{if(tapMoved>12)return;ndc.x=(e.clientX/inner
   const h=ray.intersectObjects(targets,false);if(!h.length)return;const u=h[0].object.userData;
   if(u.dream)dreamGo(DREAMS[u.di]);else manualGo(u.i);});
 
-/* ---- photo pop-ups: user photos burst out from random points all around the globe, one at a time, shuffled with no immediate repeats ---- */
+/* ---- photo pop-ups: user photos always emerge from directly behind the globe (from the camera's current view), swing out to a random visible spot, grow, then swing back behind and shrink away — one at a time, shuffled with no immediate repeats ---- */
 const POP_IMAGES=[
   {src:'content/gallery/pop1.png',asp:0.5631},
   {src:'content/gallery/pop2.png',asp:0.6009},
@@ -1126,30 +1126,47 @@ function nextPopIdx(){
   }
   const idx=popQueue.shift(); popLast=idx; return idx;
 }
+// spherical interpolation between two unit direction vectors
+function popSlerpDir(from,to,frac){
+  const dot=THREE.MathUtils.clamp(from.dot(to),-1,1);
+  if(dot>0.9995) return from.clone().lerp(to,frac).normalize();
+  const theta=Math.acos(dot)*frac;
+  const rel=to.clone().addScaledVector(from,-dot).normalize();
+  return from.clone().multiplyScalar(Math.cos(theta)).addScaledVector(rel,Math.sin(theta));
+}
 let popState=null,popNextT=0,popStarted=false;
-const POP_DUR=2.6, POP_GAP=0.55, POP_PEAK_W=0.65; // peak width ≈ 1/3 of the globe's width (2*R)
+const POP_DUR=2.6, POP_GAP=0.55, POP_PEAK_W=0.4; // peak width — a compact pop-out size
 function startPop(t){
   const idx=nextPopIdx(), pd=POP_IMAGES[idx];
   popSpriteMat.map=popTextures[idx]; popSpriteMat.needsUpdate=true;
-  const lat=Math.asin(2*Math.random()-1)*180/Math.PI, lng=Math.random()*360-180; // uniform random point, any direction
-  popState={dir:v3(lat,lng,1).normalize(),t0:t,asp:pd.asp};
+  // "directly behind" = the point on the globe farthest from the camera right now, in the globe's own (rotating) local space
+  const camLocal=camera.position.clone().sub(globe.position).normalize().applyQuaternion(globe.quaternion.clone().invert());
+  const startDir=camLocal.clone().negate();
+  // pick a resting spot guaranteed to clear the limb and actually be visible at peak, instead of a fully uniform pick that could land back-facing
+  let endDir=camLocal.clone();
+  for(let tries=0;tries<20;tries++){
+    const lat=Math.asin(2*Math.random()-1)*180/Math.PI, lng=Math.random()*360-180;
+    const cand=v3(lat,lng,1).normalize();
+    if(cand.dot(camLocal)>-0.25){ endDir=cand; break; }
+  }
+  popState={startDir,endDir,t0:t,asp:pd.asp};
   popSprite.visible=true;
 }
-const _popOutward=new THREE.Vector3();
 function updatePhotoPop(t){
   if(!popSplashEl||!popSplashEl.classList.contains('hide'))return; // wait until splash is dismissed
   if(!popStarted){popStarted=true;popNextT=t+1.2;}
   if(!popState){ if(t>=popNextT) startPop(t); return; }
   const u=Math.min(1,(t-popState.t0)/POP_DUR);
-  const p=Math.sin(Math.PI*u); // smooth 0 -> 1 -> 0 bump: grows, holds near peak, shrinks
-  const radius=THREE.MathUtils.lerp(0.18,1.65,p); // deep inside/behind the globe (hidden) -> well past its surface (popped out)
+  const p=Math.sin(Math.PI*u); // smooth 0 -> 1 -> 0 bump: behind & hidden -> out & visible -> behind & hidden again
+  const dir=popSlerpDir(popState.startDir,popState.endDir,p);
+  const radius=THREE.MathUtils.lerp(0.3,1.5,p);
   const w=POP_PEAK_W*p, h=w/popState.asp;
-  popSprite.position.copy(popState.dir).multiplyScalar(radius);
+  popSprite.position.copy(dir).multiplyScalar(radius);
   popSprite.scale.set(Math.max(0.001,w),Math.max(0.001,h),1);
   popSpriteMat.opacity=p;
-  // keep the image's bottom (feet) pointed at the globe's centre regardless of where it pops out or how the globe has rotated
-  _popOutward.copy(popState.dir).applyQuaternion(globe.quaternion);
-  popSpriteMat.rotation=Math.atan2(-_popOutward.x,_popOutward.y);
+  // keep the image's bottom (feet) pointed at the globe's centre regardless of where it is or how the globe has rotated
+  const outward=dir.clone().applyQuaternion(globe.quaternion);
+  popSpriteMat.rotation=Math.atan2(-outward.x,outward.y);
   if(u>=1){ popSprite.visible=false; popState=null; popNextT=t+POP_GAP; }
 }
 
