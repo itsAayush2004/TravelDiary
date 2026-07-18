@@ -72,6 +72,12 @@
   .goal-meta .togo{font-size:18px;color:var(--ink-soft);margin-top:4px;font-style:italic}
   .goal-meta .togo b{color:var(--ink);font-weight:600;font-style:normal}
 
+  /* Brand mark — always visible, top-right; sits just left of the Logbook panel on desktop */
+  .brandmark{position:fixed;top:30px;right:350px;z-index:10;width:44px;height:44px;border-radius:12px;overflow:hidden;
+    background:var(--glass);border:1px solid var(--edge);box-shadow:var(--soft);
+    backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+  .brandmark img{width:100%;height:100%;display:block;object-fit:cover}
+
   /* Logbook */
   .panel{position:fixed;top:30px;right:30px;z-index:10;width:304px;max-height:calc(100vh - 60px);
     display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--edge);border-radius:12px;overflow:hidden;
@@ -371,6 +377,7 @@
   @media (prefers-reduced-motion: reduce){.loader-globe svg,.loader-orbit,.loader-dots i{animation:none}}
 
   @media (max-width:720px){
+    .brandmark{top:calc(14px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));width:38px;height:38px;border-radius:10px}
     .goal{top:calc(14px + env(safe-area-inset-top));left:calc(14px + env(safe-area-inset-left));padding:12px 16px 12px 12px;gap:12px}
     .promo{top:calc(12px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));right:auto}
     .mkey{top:calc(50px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));gap:9px;padding:6px 12px}
@@ -454,6 +461,8 @@
       <text x="50" y="22" text-anchor="middle" font-size="7.5" font-family="Cinzel, serif" fill="currentColor" stroke="none">N</text>
     </svg>
   </div>
+
+  <div class="brandmark" aria-hidden="true"><img src="apple-touch-icon.png" alt=""></div>
 
   <div class="panel">
     <div class="panel-head" id="panelHead">
@@ -1327,7 +1336,7 @@ applyLayout(); camera.position.z=baseZ;
   if(document.fonts && document.fonts.ready){
     Promise.race([
       Promise.all([document.fonts.load('400 1em "Jersey 10"'), document.fonts.ready]),
-      new Promise(res=>setTimeout(res,2500))
+      new Promise(res=>setTimeout(res,200))
     ]).then(reveal).catch(reveal);
   } else { reveal(); }
 })();
