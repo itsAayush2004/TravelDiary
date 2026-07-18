@@ -1103,77 +1103,6 @@ canvas.addEventListener('click',e=>{if(tapMoved>12)return;ndc.x=(e.clientX/inner
   const h=ray.intersectObjects(targets,false);if(!h.length)return;const u=h[0].object.userData;
   if(u.dream)dreamGo(DREAMS[u.di]);else manualGo(u.i);});
 
-/* ---- photo pop-ups: user photos always emerge from directly behind the globe (from the camera's current view), swing out to a random visible spot, grow, then swing back behind and shrink away — one at a time, shuffled with no immediate repeats ---- */
-const POP_IMAGES=[
-  {src:'content/gallery/pop1.png',asp:0.5631},
-  {src:'content/gallery/pop2.png',asp:0.6009},
-  {src:'content/gallery/pop3.png',asp:0.6119},
-  {src:'content/gallery/pop4.png',asp:0.7504},
-  {src:'content/gallery/pop5.png',asp:0.6119},
-  {src:'content/gallery/pop6.png',asp:0.6009},
-  {src:'content/gallery/pop7.png',asp:0.5631}
-];
-const popLoader=new THREE.TextureLoader();
-const popTextures=POP_IMAGES.map(p=>{const tx=popLoader.load(p.src);tx.encoding=THREE.sRGBEncoding;return tx;});
-const popSpriteMat=new THREE.SpriteMaterial({transparent:true,depthWrite:false,opacity:0});
-const popSprite=new THREE.Sprite(popSpriteMat);
-popSprite.visible=false; globe.add(popSprite); // parented to the globe so it spins along with it
-const popSplashEl=document.getElementById('splash');
-
-function popShuffle(n){const a=[...Array(n).keys()];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-let popQueue=[],popLast=-1;
-function nextPopIdx(){
-  if(popQueue.length===0){
-    let q=popShuffle(POP_IMAGES.length);
-    if(POP_IMAGES.length>1&&q[0]===popLast){const s=1+Math.floor(Math.random()*(q.length-1));[q[0],q[s]]=[q[s],q[0]];}
-    popQueue=q;
-  }
-  const idx=popQueue.shift(); popLast=idx; return idx;
-}
-// spherical interpolation between two unit direction vectors
-function popSlerpDir(from,to,frac){
-  const dot=THREE.MathUtils.clamp(from.dot(to),-1,1);
-  if(dot>0.9995) return from.clone().lerp(to,frac).normalize();
-  const theta=Math.acos(dot)*frac;
-  const rel=to.clone().addScaledVector(from,-dot).normalize();
-  return from.clone().multiplyScalar(Math.cos(theta)).addScaledVector(rel,Math.sin(theta));
-}
-let popState=null,popNextT=0,popStarted=false;
-const POP_DUR=2.6, POP_GAP=0.55, POP_PEAK_W=0.4; // peak width — a compact pop-out size
-function startPop(t){
-  const idx=nextPopIdx(), pd=POP_IMAGES[idx];
-  popSpriteMat.map=popTextures[idx]; popSpriteMat.needsUpdate=true;
-  // "directly behind" = the point on the globe farthest from the camera right now, in the globe's own (rotating) local space
-  const camLocal=camera.position.clone().sub(globe.position).normalize().applyQuaternion(globe.quaternion.clone().invert());
-  const startDir=camLocal.clone().negate();
-  // pick a resting spot guaranteed to clear the limb and actually be visible at peak, instead of a fully uniform pick that could land back-facing
-  let endDir=camLocal.clone();
-  for(let tries=0;tries<20;tries++){
-    const lat=Math.asin(2*Math.random()-1)*180/Math.PI, lng=Math.random()*360-180;
-    const cand=v3(lat,lng,1).normalize();
-    if(cand.dot(camLocal)>-0.25){ endDir=cand; break; }
-  }
-  popState={startDir,endDir,t0:t,asp:pd.asp};
-  popSprite.visible=true;
-}
-function updatePhotoPop(t){
-  if(!popSplashEl||!popSplashEl.classList.contains('hide'))return; // wait until splash is dismissed
-  if(!popStarted){popStarted=true;popNextT=t+1.2;}
-  if(!popState){ if(t>=popNextT) startPop(t); return; }
-  const u=Math.min(1,(t-popState.t0)/POP_DUR);
-  const p=Math.sin(Math.PI*u); // smooth 0 -> 1 -> 0 bump: behind & hidden -> out & visible -> behind & hidden again
-  const dir=popSlerpDir(popState.startDir,popState.endDir,p);
-  const radius=THREE.MathUtils.lerp(0.3,1.5,p);
-  const w=POP_PEAK_W*p, h=w/popState.asp;
-  popSprite.position.copy(dir).multiplyScalar(radius);
-  popSprite.scale.set(Math.max(0.001,w),Math.max(0.001,h),1);
-  popSpriteMat.opacity=p;
-  // keep the image's bottom (feet) pointed at the globe's centre regardless of where it is or how the globe has rotated
-  const outward=dir.clone().applyQuaternion(globe.quaternion);
-  popSpriteMat.rotation=Math.atan2(-outward.x,outward.y);
-  if(u>=1){ popSprite.visible=false; popState=null; popNextT=t+POP_GAP; }
-}
-
 /* ---- render ---- */
 const ease=k=>k<0.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
 // ambient motion gently sweeps across the region where the markers actually are — no full 360° spin
@@ -1259,7 +1188,6 @@ function animate(now){requestAnimationFrame(animate);
   const gsc=globe.scale.x+(gScaleTarget-globe.scale.x)*lerpK;globe.scale.setScalar(gsc);
   edgeRing.position.x=globe.position.x;edgeRing.position.y=globe.position.y;edgeRing.scale.setScalar(gsc);
   if(zoomSlider&&!sliderActive){zoomSlider.value=Math.round((4.6-camera.position.z)/(4.6-1.5)*100);}
-  updatePhotoPop(t);
   renderer.render(scene,camera);}
 requestAnimationFrame(animate);
 
