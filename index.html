@@ -1366,8 +1366,8 @@ applyLayout(); camera.position.z=baseZ;
   document.getElementById('enterBtn').addEventListener('click',e=>{e.stopPropagation();enter();});
   const hint=document.getElementById('sHint');
   (function wait(){ if(texReady){ hint.textContent='Tap to enter'; } else setTimeout(wait,200); })();
-  // auto-enter once ready, after a minimum dwell (6 seconds)
-  setTimeout(function chk(){ if(texReady && !document.getElementById('loader')) enter(); else setTimeout(chk,200); }, 6000);
+  // auto-enter once the loading screen is gone, after a minimum dwell on the welcome card
+  (function chk(){ if(texReady && !document.getElementById('loader')) setTimeout(enter,3500); else setTimeout(chk,200); })();
 })();
 
 /* ---- boot gate: hold the loading screen until fonts + globe texture are ready, so nothing half-built is ever shown ---- */
