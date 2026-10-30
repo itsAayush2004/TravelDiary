@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/banner.svg" alt="Animated banner: a spinning globe with home, visited and wishlist markers, a logbook legend and a goal ring." width="100%"></p>
+
 # Travel Diary
 
 A living, interactive 3D globe charting every place I've been — and the places I still dream of going. A single self-contained HTML file, built with Three.js, styled like an antique atlas.
